@@ -16,7 +16,6 @@ long long Timer::CurrentBreakBank()
     if (onBreak)
     {
         bank -= std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - breakStart).count();
-        if (bank < 0) bank = 0;
     }
     return bank;
 }
@@ -44,7 +43,7 @@ void Timer::StopFocus()
 
 void Timer::StartBreak()
 {
-    if (focusing || onBreak || breakBankSeconds <= 0)
+    if (focusing || onBreak)
         return;
 
     onBreak = true;
@@ -58,7 +57,6 @@ void Timer::StopBreak()
 
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - breakStart).count();
 
-    if (elapsed > breakBankSeconds) elapsed = breakBankSeconds;
     breakBankSeconds -= elapsed;
     onBreak = false;
 }
@@ -71,95 +69,6 @@ void Timer::Reset()
     breakBankSeconds = 0;
 }
 
-void Draw(Timer& timer)
-{
-    werase(stdscr);
-
-    int rows, cols;
-    getmaxyx(stdscr, rows, cols);
-
-    bool focusing = timer.get_focusing();
-    bool onBreak = timer.get_onbreak();
-    long long focus = timer.CurrentFocusTime();
-    long long bank = timer.CurrentBreakBank();
-
-
-    const int width = 60;
-    const int startX = (cols - width) / 2;
-    const int startY = 2;
-
-    // Border
-    mvaddch(startY, startX, ACS_ULCORNER);
-    mvhline(startY, startX + 1, ACS_HLINE, width - 2);
-    mvaddch(startY, startX + width - 1, ACS_URCORNER);
-
-    for (int y = 1; y < 19; y++)
-    {
-        mvaddch(startY + y, startX, ACS_VLINE);
-        mvaddch(startY + y, startX + width - 1, ACS_VLINE);
-    }
-
-    mvaddch(startY + 19, startX, ACS_LLCORNER);
-    mvhline(startY + 19, startX + 1, ACS_HLINE, width - 2);
-    mvaddch(startY + 19, startX + width - 1, ACS_LRCORNER);
-
-    // Title
-    attron(COLOR_PAIR(2) | A_BOLD);
-    mvprintw(startY + 1, startX + 20, "FOCUS TIMER");
-    attroff(COLOR_PAIR(2) | A_BOLD);
-
-    mvhline(startY + 2, startX + 1, ACS_HLINE, width - 2);
-
-    // Status
-    attron(A_BOLD);
-    mvprintw(startY + 4, startX + 3, "STATUS");
-    attroff(A_BOLD);
-
-    if (focusing)
-    {
-        attron(COLOR_PAIR(3) | A_BOLD);
-        mvprintw(startY + 5, startX + 8, "FOCUSING");
-        attroff(COLOR_PAIR(3) | A_BOLD);
-    }
-    else if (onBreak)
-    {
-        attron(COLOR_PAIR(4) | A_BOLD);
-        mvprintw(startY + 5, startX + 8, "ON BREAK");
-        attroff(COLOR_PAIR(4) | A_BOLD);
-    }
-    else
-    {
-        attron(COLOR_PAIR(5) | A_BOLD);
-        mvprintw(startY + 5, startX + 8, "IDLE");
-        attroff(COLOR_PAIR(5) | A_BOLD);
-    }
-
-    // Focus
-    attron(A_BOLD);
-    mvprintw(startY + 8, startX + 3, "FOCUS TIME");
-    mvprintw(startY + 9, startX + 8, "%s", FormatTime(focus).c_str());
-    attroff(A_BOLD);
-
-    // Break
-    attron(A_BOLD);
-    mvprintw(startY + 12, startX + 3, "BREAK BANK");
-    mvprintw(startY + 13, startX + 8, "%s", FormatTime(bank).c_str());
-    attroff(A_BOLD);
-
-    // Divider
-    mvhline(startY + 16, startX + 1, ACS_HLINE, width - 2);
-
-    attron(A_BOLD);
-    mvprintw(startY + 17, startX + 3, "[F] Focus");
-    mvprintw(startY + 17, startX + 22, "[B] Break");
-
-    mvprintw(startY + 18, startX + 3, "[R] Reset");
-    mvprintw(startY + 18, startX + 22, "[Q] Quit");
-    attroff(A_BOLD);
-
-    wnoutrefresh(stdscr);
-    doupdate();
-}
 
 bool ExecuteCommand(const std::string& command, Timer& timer)
 {
@@ -189,70 +98,91 @@ bool ExecuteCommand(const std::string& command, Timer& timer)
 
 int main()
 {
-    // Initialize ncurses
-    initscr();
-    cbreak();
-    noecho();
-    keypad(stdscr, TRUE);
-    curs_set(0);
+    sf::RenderWindow window(sf::VideoMode({900, 600}),"Focus Timer");
 
-    if (has_colors())
+    window.setFramerateLimit(30); // Limit rendering to 30 FPS.
+
+    //--------------------------------------------------
+    // Load font
+    //--------------------------------------------------
+
+    sf::Font font;
+
+    if (!font.loadFromFile("Roboto-Regular.ttf"))
     {
-        start_color();
-
-        init_pair(1, COLOR_WHITE, COLOR_BLACK);
-        init_pair(2, COLOR_CYAN, COLOR_BLACK);
-        init_pair(3, COLOR_GREEN, COLOR_BLACK);
-        init_pair(4, COLOR_YELLOW, COLOR_BLACK);
-        init_pair(5, COLOR_RED, COLOR_BLACK);
+        return -1;
     }
 
     Timer timer;
 
-    bool running = true;
+    //--------------------------------------------------
+    // Main loop
+    //--------------------------------------------------
 
-    timeout(100);
-
-    while (running)
+    while (window.isOpen())
     {
-        Draw(timer);
+        sf::Event event;
 
-        int ch = getch();
-
-        switch (tolower(ch))
+        while (window.pollEvent(event))
         {
-            case 'f':
+            if (event.type == sf::Event::Closed)
             {
-                if (timer.get_focusing())
-                    timer.StopFocus();
-                else
-                    timer.StartFocus();
-                break;
+                window.close();
             }
-            case 'b':
+
+            if (event.type == sf::Event::KeyPressed)
             {
-                if (timer.get_onbreak())
-                    timer.StopBreak();
-                else
-                    timer.StartBreak();
-                break;
+                switch (event.key.code)
+                {
+                    case sf::Keyboard::F:
+                    {
+                        if (timer.get_focusing())
+                            timer.StopFocus();
+                        else
+                            timer.StartFocus();
+
+                        break;
+                    }
+
+                    case sf::Keyboard::B:
+                    {
+                        if (timer.get_onbreak())
+                            timer.StopBreak();
+                        else
+                            timer.StartBreak();
+
+                        break;
+                    }
+
+                    case sf::Keyboard::R:
+                    {
+                        timer.Reset();
+                        break;
+                    }
+
+                    case sf::Keyboard::Q:
+                    case sf::Keyboard::Escape:
+                    {
+                        window.close();
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
             }
-            case 'r':
+
+            if (event.type == sf::Event::Resized)
             {
-                timer.Reset();
-                break;
+                window.setView(sf::View(
+                    sf::FloatRect(0.f, 0.f,
+                    event.size.width,
+                    event.size.height)));
             }
-            case 'q':
-            {
-                running = false;
-                break;
-            }   
         }
 
-        // napms(100); // Sleep for 100ms so CPU usage stays extremely low.
+        Draw(window, font, timer);
     }
-
-    endwin();
 
     return 0;
 }
