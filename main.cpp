@@ -4,8 +4,10 @@ long long Timer::CurrentFocusTime()
 {
     long long total = totalFocusSeconds;
     if (focusing)
-    {
-        total += std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - focusStart).count();
+    {   
+        long long new_count = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - focusStart).count();
+        breakCalcSeconds = new_count / 4;
+        total += new_count;
     }
     return total;
 }
@@ -18,6 +20,11 @@ long long Timer::CurrentBreakBank()
         bank -= std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - breakStart).count();
     }
     return bank;
+}
+
+long long Timer::CurrentBreakCalc()
+{
+    return breakCalcSeconds;
 }
 
 void Timer::StartFocus()
@@ -39,6 +46,7 @@ void Timer::StopFocus()
     focusing = false;
     totalFocusSeconds += elapsed;
     breakBankSeconds += elapsed / 4;    // Every 4 minutes of focus earns 1 minute of break.
+    breakCalcSeconds = 0;
 }
 
 void Timer::StartBreak()
@@ -67,33 +75,6 @@ void Timer::Reset()
     onBreak = false;    
     totalFocusSeconds = 0;
     breakBankSeconds = 0;
-}
-
-
-bool ExecuteCommand(const std::string& command, Timer& timer)
-{
-    if (command == "start")
-    {
-        timer.StartFocus();
-    }
-    else if (command == "stop")
-    {
-        timer.StopFocus();
-    }
-    else if (command == "break start")
-    {
-        timer.StartBreak();
-    }
-    else if (command == "break stop")
-    {
-        timer.StopBreak();  
-    }
-    else if (command == "quit")
-    {
-        return false;
-    }
-
-    return true;
 }
 
 int main()

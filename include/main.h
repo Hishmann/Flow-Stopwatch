@@ -25,13 +25,15 @@ class Timer
 
         long long totalFocusSeconds = 0;
         long long breakBankSeconds = 0;
+        long long breakCalcSeconds = 0;
 
     public:
 
-        bool get_focusing() {return focusing;}
-        bool get_onbreak() {return onBreak;}
+        bool get_focusing() { return focusing; }
+        bool get_onbreak() { return onBreak; }
         long long CurrentFocusTime();
         long long CurrentBreakBank();
+        long long CurrentBreakCalc();
         void StartFocus();
         void StopFocus();
         void StartBreak();
@@ -43,19 +45,19 @@ class Timer
 std::string FormatTime(long long seconds)
 {
 
-    long long s = (seconds >= 0) ? seconds : -seconds;
+    std::string sign = (seconds < 0) ? "-" : "";
+    long long total_seconds = std::abs(seconds);
 
-    long long h = seconds / 3600;
-    seconds %= 3600;
+    long long h = total_seconds / 3600; 
+    total_seconds %= 3600;
 
-    long long m = seconds / 60;
-    seconds %= 60;
+    long long m = total_seconds / 60;
+    long long s = total_seconds % 60;
 
     std::stringstream ss;
-    
-    std::string ne = (seconds < 0) ? "-" : "" ;
 
-    ss << std::setfill('0') << ne
+    ss << sign; 
+    ss << std::setfill('0') 
        << std::setw(2) << h << ":"
        << std::setw(2) << m << ":"
        << std::setw(2) << s;
@@ -192,10 +194,10 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
 
 
     if (bank_time >= 0) {
-        bank.setString("BREAK BANK: " + FormatTime(bank_time));
+        bank.setString("BREAK BANK: " + FormatTime(bank_time) + " [" + FormatTime(timer.CurrentBreakCalc()) + "]");
         bank.setFillColor(sf::Color::Green);
     } else {
-        bank.setString("BREAK DEBT: " + FormatTime(bank_time));
+        bank.setString("BREAK DEBT: " + FormatTime(bank_time) + " [" + FormatTime(timer.CurrentBreakCalc()) + "]");
         bank.setFillColor(sf::Color(220, 70, 70));
     }
 
