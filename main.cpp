@@ -1,12 +1,13 @@
 #include "main.h"
 
-long long Timer::CurrentFocusTime()
+long long Timer::CurrentFocusBank()
 {
-    long long total = totalFocusSeconds;
+    long long total = FocusBankSeconds;
     if (focusing)
     {   
         long long new_count = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - focusStart).count();
         breakCalcSeconds = new_count / 4;
+        FocusCurrentSeconds = new_count;
         total += new_count;
     }
     return total;
@@ -27,6 +28,11 @@ long long Timer::CurrentBreakCalc()
     return breakCalcSeconds;
 }
 
+long long Timer::CurrentFocusPass()
+{
+    return FocusCurrentSeconds;
+}
+
 void Timer::StartFocus()
 {
     if (focusing || onBreak)
@@ -44,7 +50,8 @@ void Timer::StopFocus()
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - focusStart).count();
 
     focusing = false;
-    totalFocusSeconds += elapsed;
+    FocusBankSeconds += elapsed;
+    FocusCurrentSeconds = 0;
     breakBankSeconds += elapsed / 4;    // Every 4 minutes of focus earns 1 minute of break.
     breakCalcSeconds = 0;
 }
@@ -73,7 +80,7 @@ void Timer::Reset()
 {
     focusing = false;
     onBreak = false;    
-    totalFocusSeconds = 0;
+    FocusBankSeconds = 0;
     breakBankSeconds = 0;
 }
 

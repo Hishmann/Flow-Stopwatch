@@ -23,7 +23,8 @@ class Timer
         Clock::time_point focusStart;
         Clock::time_point breakStart;
 
-        long long totalFocusSeconds = 0;
+        long long FocusBankSeconds = 0;
+        long long FocusCurrentSeconds = 0;
         long long breakBankSeconds = 0;
         long long breakCalcSeconds = 0;
 
@@ -31,7 +32,8 @@ class Timer
 
         bool get_focusing() { return focusing; }
         bool get_onbreak() { return onBreak; }
-        long long CurrentFocusTime();
+        long long CurrentFocusBank();
+        long long CurrentFocusPass();
         long long CurrentBreakBank();
         long long CurrentBreakCalc();
         void StartFocus();
@@ -166,14 +168,13 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
     sf::Text focus;
     focus.setFont(font);
 
-    focus.setCharacterSize(72);
+    focus.setCharacterSize(64);
 
     focus.setStyle(sf::Text::Bold);
 
     focus.setFillColor(sf::Color::White);
 
-    focus.setString(FormatTime(
-        timer.CurrentFocusTime()));
+    focus.setString(FormatTime(timer.CurrentFocusBank()) + " [" + FormatTime(timer.CurrentFocusPass()) + "]" );
 
     CenterText(focus, panelTop + 230.f, window);
 
@@ -186,18 +187,17 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
     sf::Text bank;
     bank.setFont(font);
 
-    bank.setCharacterSize(42);
+    bank.setCharacterSize(48);
 
     bank.setFillColor(sf::Color(180,180,180));
     
     long long bank_time = timer.CurrentBreakBank();
 
-
     if (bank_time >= 0) {
-        bank.setString("BREAK BANK: " + FormatTime(bank_time) + " [" + FormatTime(timer.CurrentBreakCalc()) + "]");
+        bank.setString(FormatTime(bank_time) + " [" + FormatTime(timer.CurrentBreakCalc()) + "]");
         bank.setFillColor(sf::Color::Green);
     } else {
-        bank.setString("BREAK DEBT: " + FormatTime(bank_time) + " [" + FormatTime(timer.CurrentBreakCalc()) + "]");
+        bank.setString(FormatTime(bank_time) + " [" + FormatTime(timer.CurrentBreakCalc()) + "]");
         bank.setFillColor(sf::Color(220, 70, 70));
     }
 
