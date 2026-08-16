@@ -1,6 +1,6 @@
 # Flow Stopwatch
 
-Flowing Time is a lightweight and flexible focus timer designed for people who find traditional Pomodoro timers too restrictive. 
+Flow Stopwatch is a lightweight and flexible focus stopwatch designed for people who find traditional Pomodoro timers too restrictive. 
 Instead of forcing fixed work and break intervals, it lets you work for as long as you remain focused while tracking your total focus time.
 Based on the time you've spent working, the application rewards you with a proportional amount of break time.
 
