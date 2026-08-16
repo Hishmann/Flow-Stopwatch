@@ -112,6 +112,7 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
     window.draw(panel);
 
     float panelTop = panel.getPosition().y;
+    float panelCovered = panelTop;
 
     //------------------------------------
     // Title
@@ -119,18 +120,31 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
 
     sf::Text title;
     title.setFont(font);
-
-    title.setString("FOCUS TIMER");
-
+    title.setString("FLOW STOPWATCH");
     title.setCharacterSize(42);
-
     title.setStyle(sf::Text::Bold);
-
     title.setFillColor(sf::Color::Cyan);
 
-    CenterText(title, panelTop + 55.f, window);
+    CenterText(title, panelCovered + 55.f, window);
+    panelCovered += 55.f;
 
     window.draw(title);
+
+    //------------------------------------
+    // Idea
+    //------------------------------------
+
+    sf::Text idea;
+    idea.setFont(font);
+    idea.setString("[Focus on the work and let the time pass as a byproduct]");
+    idea.setCharacterSize(20);
+    idea.setStyle(sf::Text::Italic);
+    idea.setFillColor(sf::Color::White);
+
+    CenterText(idea, panelCovered + 55.f, window);
+    panelCovered += 55.f;
+
+    window.draw(idea);
 
     //------------------------------------
     // Status
@@ -157,7 +171,8 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
         status.setFillColor(sf::Color(230,90,90));
     }
 
-    CenterText(status, panelTop + 115.f, window);
+    CenterText(status, panelCovered + 60.f, window);
+    panelCovered += 60.f;
 
     window.draw(status);
 
@@ -176,7 +191,8 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
 
     focus.setString(FormatTime(timer.CurrentFocusBank()) + " [" + FormatTime(timer.CurrentFocusPass()) + "]" );
 
-    CenterText(focus, panelTop + 230.f, window);
+    CenterText(focus, panelCovered + 85.f, window);
+    panelCovered += 85.f;
 
     window.draw(focus);
 
@@ -201,7 +217,8 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
         bank.setFillColor(sf::Color(220, 70, 70));
     }
 
-    CenterText(bank, panelTop + 340.f, window);
+    CenterText(bank, panelCovered + 110.f, window);
+    panelCovered += 110.f;
 
     window.draw(bank);
 
@@ -222,7 +239,8 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
         "[R] Reset    "
         "[Q] Quit");
 
-    CenterText(controls, panelTop + 450.f, window);
+    CenterText(controls, panelCovered + 110.f, window);
+    panelCovered += 110.f;
 
     window.draw(controls);
 
