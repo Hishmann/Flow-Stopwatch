@@ -18,7 +18,7 @@ The goal is to encourage sustainable productivity without interrupting your work
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Hishmann/Flowing-Time.git
+git clone https://github.com/Hishmann/Flow-Stopwatch.git
 cd flowing_time
 ```
 
