@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <cmath>
 
 #include <SFML/Graphics.hpp>
 
@@ -17,40 +18,64 @@ using Clock = std::chrono::steady_clock;
 class Timer
 {
     private:
-        bool focusing = false;
-        bool onBreak = false;
+        bool work_mode = false;
+        bool break_mode = false;
 
-        Clock::time_point focusStart;
-        Clock::time_point breakStart;
+        Clock::time_point work_start;
+        Clock::time_point break_start;
 
-        long long FocusBankSeconds = 0;
-        long long FocusCurrentSeconds = 0;
-        long long breakBankSeconds = 0;
-        long long breakCalcSeconds = 0;
+        // Total time spent working/breaking
+        long long work_bank = 0;
+        long long prev_work_bank = 0;
+        long long break_bank = 0;
+        long long prev_break_bank = 0;
+
+        // Time set for the work session
+        long long work_set_time = 0;
+        long long work_left = 0;
+
+        // Break ratio (ex. 5 means 1 minute of break for every 5 minutes of work)
+        long long break_ratio = 5;
+        long long break_allowance = 0;
 
     public:
 
-        bool get_focusing() { return focusing; }
-        bool get_onbreak() { return onBreak; }
-        long long CurrentFocusBank();
-        long long CurrentFocusPass();
-        long long CurrentBreakBank();
-        long long CurrentBreakCalc();
-        void StartFocus();
-        void StopFocus();
-        void StartBreak();
-        void StopBreak();
-        void Reset();
+        bool get_work_mode() { return work_mode; }
+        bool get_break_mode() { return break_mode; }
+
+        long long get_work_bank() { return work_bank; }
+        long long get_break_bank() { return break_bank; }
+
+        long long get_work_left() { return work_left; }
+        long long get_break_allowance() { return break_allowance; }
+        long long get_break_ratio() { return break_ratio; }
+
+        void update_all_time();
+        void add_work_time(long long seconds);
+
+        void add_break_ratio(long long ratio)
+        {
+            if (break_ratio + ratio <= 0)
+                return;
+            break_ratio += ratio;
+        }
+
+        void start_work();
+        void stop_work();
+
+        void start_break();
+        void stop_break();
+
+        void reset_timer();
 };
 
 
-std::string FormatTime(long long seconds)
+std::string format_time(long long seconds)
 {
-
     std::string sign = (seconds < 0) ? "-" : "";
     long long total_seconds = std::abs(seconds);
 
-    long long h = total_seconds / 3600; 
+    long long h = total_seconds / 3600;
     total_seconds %= 3600;
 
     long long m = total_seconds / 60;
@@ -58,8 +83,8 @@ std::string FormatTime(long long seconds)
 
     std::stringstream ss;
 
-    ss << sign; 
-    ss << std::setfill('0') 
+    ss << sign;
+    ss << std::setfill('0')
        << std::setw(2) << h << ":"
        << std::setw(2) << m << ":"
        << std::setw(2) << s;
@@ -92,7 +117,7 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
     // Background panel
     //------------------------------------
 
-    sf::RectangleShape panel({700.f,500.f});
+    sf::RectangleShape panel({0.f,0.f});
 
     panel.setFillColor(sf::Color(40,40,45));
 
@@ -100,7 +125,7 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
 
     panel.setOutlineColor(sf::Color(80,80,90));
 
-    const sf::Vector2f panelSize(760.f, 540.f);
+    const sf::Vector2f panelSize(760.f, 600.f);
 
     panel.setSize(panelSize);
 
@@ -120,7 +145,7 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
 
     sf::Text title;
     title.setFont(font);
-    title.setString("FLOW STOPWATCH");
+    title.setString("WORK TIME");
     title.setCharacterSize(42);
     title.setStyle(sf::Text::Bold);
     title.setFillColor(sf::Color::Cyan);
@@ -136,13 +161,27 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
 
     sf::Text idea;
     idea.setFont(font);
-    idea.setString("[Focus on the work and let the time pass as a byproduct]");
+    idea.setString("Focus on the work and let the time pass as a byproduct");
     idea.setCharacterSize(20);
     idea.setStyle(sf::Text::Italic);
     idea.setFillColor(sf::Color::White);
 
     CenterText(idea, panelCovered + 55.f, window);
     panelCovered += 55.f;
+
+    window.draw(idea);
+
+    idea.setString("Visualize Success Visualize Consequence");
+
+    CenterText(idea, panelCovered + 25.f, window);
+    panelCovered += 25.f;
+
+    window.draw(idea);
+
+    idea.setString("Make it Interesting Fun ");
+
+    CenterText(idea, panelCovered + 25.f, window);
+    panelCovered += 25.f;
 
     window.draw(idea);
 
@@ -155,15 +194,16 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
 
     status.setCharacterSize(30);
 
-    if(timer.get_focusing())
+    if(timer.get_work_mode())
     {
-        status.setString("FOCUSING");
-        status.setFillColor(sf::Color::Green);
-    }
-    else if(timer.get_onbreak())
-    {
-        status.setString("ON BREAK");
-        status.setFillColor(sf::Color::Yellow);
+        if (timer.get_break_mode())
+        {
+            status.setString("ON BREAK");
+            status.setFillColor(sf::Color::Yellow);
+        } else {
+            status.setString("WORKING");
+            status.setFillColor(sf::Color::Green);
+        }
     }
     else
     {
@@ -171,56 +211,64 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
         status.setFillColor(sf::Color(230,90,90));
     }
 
-    CenterText(status, panelCovered + 60.f, window);
-    panelCovered += 60.f;
+    CenterText(status, panelCovered + 50.f, window);
+    panelCovered += 50.f;
 
     window.draw(status);
 
     //------------------------------------
-    // Focus timer
+    // Work countdown
     //------------------------------------
 
-    sf::Text focus;
-    focus.setFont(font);
+    sf::Text work;
+    work.setFont(font);
+    work.setCharacterSize(72);
+    work.setStyle(sf::Text::Bold);
+    work.setFillColor(sf::Color::White);
 
-    focus.setCharacterSize(64);
+    work.setString(format_time(timer.get_work_left()));
 
-    focus.setStyle(sf::Text::Bold);
+    CenterText(work, panelCovered + 75.f, window);
+    panelCovered += 75.f;
 
-    focus.setFillColor(sf::Color::White);
-
-    focus.setString(FormatTime(timer.CurrentFocusBank()) + " [" + FormatTime(timer.CurrentFocusPass()) + "]" );
-
-    CenterText(focus, panelCovered + 85.f, window);
-    panelCovered += 85.f;
-
-    window.draw(focus);
+    window.draw(work);
 
     //------------------------------------
-    // Break bank
+    // Break total
     //------------------------------------
 
     sf::Text bank;
     bank.setFont(font);
+    bank.setCharacterSize(72);
+    bank.setFillColor(sf::Color::Green);
 
-    bank.setCharacterSize(48);
+    bank.setString(
+        format_time(timer.get_break_bank())
+    );
 
-    bank.setFillColor(sf::Color(180,180,180));
-    
-    long long bank_time = timer.CurrentBreakBank();
-
-    if (bank_time >= 0) {
-        bank.setString(FormatTime(bank_time) + " [" + FormatTime(timer.CurrentBreakCalc()) + "]");
-        bank.setFillColor(sf::Color::Green);
-    } else {
-        bank.setString(FormatTime(bank_time) + " [" + FormatTime(timer.CurrentBreakCalc()) + "]");
-        bank.setFillColor(sf::Color(220, 70, 70));
-    }
-
-    CenterText(bank, panelCovered + 110.f, window);
-    panelCovered += 110.f;
+    CenterText(bank, panelCovered + 95.f, window);
+    panelCovered += 95.f;
 
     window.draw(bank);
+
+    //------------------------------------
+    // Break reference
+    //------------------------------------
+
+    sf::Text reference;
+    reference.setFont(font);
+    reference.setCharacterSize(30);
+    reference.setFillColor(sf::Color::White);
+
+    std::stringstream ref;
+    ref << "Break Reference (Ratio= " << timer.get_break_ratio() << "): " <<
+        format_time(timer.get_break_allowance());
+    reference.setString(ref.str());
+
+    CenterText(reference, panelCovered + 65.f, window);
+    panelCovered += 65.f;
+
+    window.draw(reference);
 
     //------------------------------------
     // Controls
@@ -234,13 +282,25 @@ void Draw(sf::RenderWindow& window, sf::Font& font, Timer& timer)
     controls.setFillColor(sf::Color(160,160,160));
 
     controls.setString(
-        "[F] Focus    "
+        "[F] Work    "
         "[B] Break    "
         "[R] Reset    "
         "[Q] Quit");
 
-    CenterText(controls, panelCovered + 110.f, window);
-    panelCovered += 110.f;
+    CenterText(controls, panelCovered + 75.f, window);
+    panelCovered += 75.f;
+
+    window.draw(controls);
+
+    controls.setString(
+    "[1] +1h    "
+    "[2] +1m    "
+    "[3] +1s    "
+    "[4] +1 Ratio    "
+    "[5] -1 Ratio");
+
+    CenterText(controls, panelCovered + 45.f, window);
+    panelCovered += 45.f;
 
     window.draw(controls);
 

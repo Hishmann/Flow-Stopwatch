@@ -1,101 +1,129 @@
 #include "main.h"
 
-long long Timer::CurrentFocusBank()
-{
-    long long total = FocusBankSeconds;
-    if (focusing)
-    {   
-        long long new_count = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - focusStart).count();
-        breakCalcSeconds = new_count / 4;
-        FocusCurrentSeconds = new_count;
-        total += new_count;
-    }
-    return total;
-}
+void Timer::update_all_time() {
 
-long long Timer::CurrentBreakBank()
-{
-    long long bank = breakBankSeconds;
-    if (onBreak)
+    if (work_mode)
     {
-        bank -= std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - breakStart).count();
+        long long elapsed =
+            std::chrono::duration_cast<std::chrono::seconds>(
+                Clock::now() - work_start
+            ).count();
+
+        work_bank = prev_work_bank + elapsed;
+        work_left = std::max(0LL, work_set_time - work_bank);
+        
+        break_allowance = work_bank / break_ratio;
+
+        if (work_left == 0) {
+            stop_work();
+        }
     }
-    return bank;
+    if (break_mode)
+    {
+        long long elapsed =
+            std::chrono::duration_cast<std::chrono::seconds>(
+                Clock::now() - break_start
+            ).count();
+
+        break_bank = prev_break_bank + elapsed;
+    }
+
 }
 
-long long Timer::CurrentBreakCalc()
-{
-    return breakCalcSeconds;
-}
 
-long long Timer::CurrentFocusPass()
+void Timer::start_work()
 {
-    return FocusCurrentSeconds;
-}
-
-void Timer::StartFocus()
-{
-    if (focusing || onBreak)
+    if (work_mode || work_left <= 0)
         return;
 
-    focusing = true;
-    focusStart = Clock::now();
+    work_mode = true;
+    work_start = Clock::now();
 }
 
-void Timer::StopFocus()
+
+void Timer::stop_work()
 {
-    if (!focusing)
+    if (!work_mode)
         return;
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - focusStart).count();
+    long long elapsed =
+        std::chrono::duration_cast<std::chrono::seconds>(
+            Clock::now() - work_start
+        ).count();
 
-    focusing = false;
-    FocusBankSeconds += elapsed;
-    FocusCurrentSeconds = 0;
-    breakBankSeconds += elapsed / 4;    // Every 4 minutes of focus earns 1 minute of break.
-    breakCalcSeconds = 0;
+    work_bank = prev_work_bank + elapsed;
+    work_left = work_set_time - work_bank;
+    prev_work_bank = work_bank;
+    work_mode = false;
 }
 
-void Timer::StartBreak()
+
+void Timer::start_break()
 {
-    if (focusing || onBreak)
+    if (break_mode || !work_mode)
         return;
 
-    onBreak = true;
-    breakStart = Clock::now();
+    break_mode = true;
+    break_start = Clock::now();
 }
 
-void Timer::StopBreak()
+
+void Timer::stop_break()
 {
-    if (!onBreak)
+    if (!break_mode || !work_mode)
         return;
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - breakStart).count();
+    long long elapsed =
+        std::chrono::duration_cast<std::chrono::seconds>(
+            Clock::now() - break_start
+        ).count();
 
-    breakBankSeconds -= elapsed;
-    onBreak = false;
+    break_bank = prev_break_bank + elapsed;
+    prev_break_bank = break_bank;
+    break_mode = false;
 }
 
-void Timer::Reset()
+
+void Timer::reset_timer()
 {
-    focusing = false;
-    onBreak = false;    
-    FocusBankSeconds = 0;
-    breakBankSeconds = 0;
+    work_mode = false;
+    break_mode = false;
+
+    work_bank = 0;
+    break_bank = 0;
+    prev_work_bank = 0;
+    prev_break_bank = 0;
+
+    work_set_time = 0;
+    work_left = 0;
+    break_allowance = 0;
+}
+
+void Timer::add_work_time(long long seconds)
+{
+    // work time cannot become negative
+    if (work_set_time + seconds < 0)
+        return;
+
+    work_set_time += seconds;
+
+    if (!work_mode) {
+        work_left = work_set_time - work_bank;
+        if (work_left < 0)
+            work_left = 0;
+    }
 }
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode({900, 600}),"Focus Timer");
+    sf::RenderWindow window(
+        sf::VideoMode({900, 700}),
+        "work Timer"
+    );
 
-    window.setFramerateLimit(30); // Limit rendering to 30 FPS.
-
-    //--------------------------------------------------
-    // Load font
-    //--------------------------------------------------
+    window.setFramerateLimit(30);
 
     sf::Font font;
-
     if (!font.loadFromFile("Roboto-Regular.ttf"))
     {
         return -1;
@@ -108,7 +136,8 @@ int main()
     //--------------------------------------------------
 
     while (window.isOpen())
-    {
+    {   
+
         sf::Event event;
 
         while (window.pollEvent(event))
@@ -124,27 +153,26 @@ int main()
                 {
                     case sf::Keyboard::F:
                     {
-                        if (timer.get_focusing())
-                            timer.StopFocus();
+                        if (timer.get_work_mode())
+                            timer.stop_work();
                         else
-                            timer.StartFocus();
+                            timer.start_work();
 
                         break;
                     }
 
                     case sf::Keyboard::B:
                     {
-                        if (timer.get_onbreak())
-                            timer.StopBreak();
+                        if (timer.get_break_mode())
+                            timer.stop_break();
                         else
-                            timer.StartBreak();
-
+                            timer.start_break();
                         break;
                     }
 
                     case sf::Keyboard::R:
                     {
-                        timer.Reset();
+                        timer.reset_timer();
                         break;
                     }
 
@@ -152,6 +180,32 @@ int main()
                     case sf::Keyboard::Escape:
                     {
                         window.close();
+                        break;
+                    }
+
+                    case sf::Keyboard::Num1:
+                    {
+                        timer.add_work_time(60*60);
+                        break;
+                    }
+                    case sf::Keyboard::Num2:
+                    {
+                        timer.add_work_time(60);
+                        break;
+                    }
+                    case sf::Keyboard::Num3:
+                    {
+                        timer.add_work_time(1);
+                        break;
+                    }
+                    case sf::Keyboard::Num4:
+                    {
+                        timer.add_break_ratio(1);
+                        break;
+                    }
+                    case sf::Keyboard::Num5:
+                    {
+                      timer.add_break_ratio(-1);
                         break;
                     }
 
@@ -163,11 +217,17 @@ int main()
             if (event.type == sf::Event::Resized)
             {
                 window.setView(sf::View(
-                    sf::FloatRect(0.f, 0.f,
-                    event.size.width,
-                    event.size.height)));
+                    sf::FloatRect(
+                        0.f,
+                        0.f,
+                        event.size.width,
+                        event.size.height
+                    )
+                ));
             }
         }
+
+        timer.update_all_time();
 
         Draw(window, font, timer);
     }

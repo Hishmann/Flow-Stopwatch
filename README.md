@@ -1,8 +1,9 @@
 # Flow Stopwatch
 
 Flow Stopwatch is a lightweight and flexible focus stopwatch designed for people who find traditional Pomodoro timers too restrictive. 
-Instead of forcing fixed work and break intervals, it lets you work for as long as you remain focused while tracking your total focus time.
-Based on the time you've spent working, the application rewards you with a proportional amount of break time.
+Instead of forcing fixed work and break intervals, you decide the length of your productive time. It lets you work for as long as you 
+remain focused while calculating the ratio of break you have accumulated based on the time you've spent working. You can then decide 
+to use the accumulated break whenever you want and for however long you want as long as you are within your limits.
 
 The goal is to encourage sustainable productivity without interrupting your workflow.
 
