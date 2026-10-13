@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 
 
 using Clock = std::chrono::steady_clock;
@@ -67,6 +68,8 @@ class Timer
         void stop_break();
 
         void reset_timer();
+
+        void play_sound();
 };
 
 

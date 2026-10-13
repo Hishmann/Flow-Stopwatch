@@ -16,6 +16,7 @@ void Timer::update_all_time() {
 
         if (work_left == 0) {
             stop_work();
+            play_sound();
         }
     }
     if (break_mode)
@@ -112,6 +113,30 @@ void Timer::add_work_time(long long seconds)
         if (work_left < 0)
             work_left = 0;
     }
+}
+
+void Timer::play_sound() {
+
+    sf::SoundBuffer buffer;
+    if (!buffer.loadFromFile("./done_sound.wav")) {
+        std::cerr << "Error loading sound file!" << std::endl;
+        return; 
+    }
+
+    sf::Sound sound;
+    sound.setBuffer(buffer);
+
+    sound.setVolume(80.f);
+    sound.setPitch(1.0f);
+
+    sound.play();
+
+    // Keep the program running while the sound plays (If the program exits immediately, you won't hear anything)
+    while (sound.getStatus() == sf::Sound::Playing) {
+        sf::sleep(sf::milliseconds(100)); // Prevent high CPU usage while waiting
+    }
+
+    return;
 }
 
 int main()

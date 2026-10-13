@@ -11,7 +11,7 @@ The goal is to encourage sustainable productivity without interrupting your work
 
 - **Linux** system
 - **CMake 3.16** or newer
-- **SFML 2.5** 
+- **SFML 2.6** 
 
 
 ## Building
@@ -42,3 +42,7 @@ Run the generated executable from the build directory.
 ### 5. Preview
 
 ![Screenshot](preview.png)
+
+### 6. Credits
+
+**done_sound.wave**: https://freesound.org/people/aj_heels/sounds/634089/

@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
+find_package(SFML 2.6 COMPONENTS graphics window system audio REQUIRED)
 
 add_executable(${CMAKE_PROJECT_NAME}
     main.cpp
@@ -20,6 +20,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     sfml-graphics
     sfml-window
     sfml-system
+    sfml-audio
 )
 
 configure_file(
