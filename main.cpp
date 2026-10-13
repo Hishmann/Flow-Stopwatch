@@ -126,7 +126,7 @@ void Timer::play_sound() {
     sf::Sound sound;
     sound.setBuffer(buffer);
 
-    sound.setVolume(80.f);
+    sound.setVolume(10.f);
     sound.setPitch(1.0f);
 
     sound.play();
